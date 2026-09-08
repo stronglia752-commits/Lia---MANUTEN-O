@@ -114,7 +114,6 @@ export default function OSForm({ onSaved }: OSFormProps) {
     const required: Record<string, string> = {
       regiao: 'Região',
       gerador: 'Gerador',
-      horimetro: 'Horímetro',
       tecnico: 'Técnico',
       data_abertura: 'Data de abertura',
       hora_inicio: 'Hora de início',
@@ -269,7 +268,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
             <input className={fieldClass('contrato')} value={form.contrato} onChange={(e) => update('contrato', e.target.value)} placeholder="Nº do contrato" />
           </Field>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-3.5">
           <Field label="Região *" error={errors.regiao}>
             <select className={fieldClass('regiao')} value={form.regiao} onChange={(e) => update('regiao', e.target.value)}>
               <option value="">Selecione...</option>
@@ -278,9 +277,6 @@ export default function OSForm({ onSaved }: OSFormProps) {
           </Field>
           <Field label="Gerador *" error={errors.gerador}>
             <input className={fieldClass('gerador')} value={form.gerador} onChange={(e) => update('gerador', e.target.value)} placeholder="ex: G26, GMG34" />
-          </Field>
-          <Field label="Horímetro (h) *" error={errors.horimetro}>
-            <input className={fieldClass('horimetro')} value={form.horimetro} onChange={(e) => update('horimetro', e.target.value)} placeholder="ex: 199" />
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-3.5">
@@ -655,5 +651,3 @@ function CheckItem({ checked, onClick, children }: { checked: boolean; onClick: 
     </div>
   );
 }
-
-    
