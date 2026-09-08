@@ -59,7 +59,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
     observacoes: '',
     proxima_manutencao: '',
     sig_tecnico: 'Matheus Firmes Reis',
-    sig_cargo: 'Gerente Operacional',
+    sig_cargo: 'Técnico de Manutenção',
     sig_data: today,
   });
 
@@ -230,7 +230,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
       p1d: '', p1c: '', p1q: '', p2d: '', p2c: '', p2q: '', p3d: '', p3c: '', p3q: '',
       pecas_extra: '', status_final: '', prazo: '', foto_descricao: '',
       observacoes: '', proxima_manutencao: '', sig_tecnico: 'Matheus Firmes Reis',
-      sig_cargo: 'Gerente Operacional',
+      sig_cargo: 'Técnico de Manutenção',
       sig_data: today,
     });
     setComponentes([]);
@@ -252,7 +252,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
         <div>
           <label className="text-[11.5px] font-medium text-[#5A6B80]">Selecione o tipo <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-2 mt-1.5">
-            {['Corretiva', 'Preventiva'].map((v) => (
+            {['Corretiva', 'Preventiva', 'Preditiva'].map((v) => (
               <Pill key={v} active={form.tipo === v} onClick={() => update('tipo', v)}>{v}</Pill>
             ))}
           </div>
@@ -655,3 +655,5 @@ function CheckItem({ checked, onClick, children }: { checked: boolean; onClick: 
     </div>
   );
 }
+
+    
