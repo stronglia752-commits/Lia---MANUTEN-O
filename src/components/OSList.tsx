@@ -16,7 +16,7 @@ export default function OSList({ onBack }: OSListProps) {
 
   // --- Aprovação do gerente (assinatura pós-criação) ---
   const [aprovNome, setAprovNome] = useState('');
-  const [aprovCargo, setAprovCargo] = useState('');
+  // cargo do gerente é fixo, não precisa de estado editável
   const [aprovSigImg, setAprovSigImg] = useState<string | null>(null);
   const [aprovSaving, setAprovSaving] = useState(false);
   const [aprovError, setAprovError] = useState<string | null>(null);
@@ -44,7 +44,6 @@ export default function OSList({ onBack }: OSListProps) {
   useEffect(() => {
     if (selected) {
       setAprovNome(selected.sig_cliente ?? '');
-      setAprovCargo(selected.sig_cliente_cargo ?? '');
       setAprovSigImg(selected.sig_cliente_img ?? null);
       setAprovError(null);
     }
@@ -80,7 +79,7 @@ export default function OSList({ onBack }: OSListProps) {
         .from('ordens_servico')
         .update({
           sig_cliente: aprovNome,
-          sig_cliente_cargo: aprovCargo || null,
+          sig_cliente_cargo: 'Gerente Operacional',
           sig_cliente_img: aprovSigImg,
           sig_cliente_data: hoje,
         })
@@ -90,7 +89,7 @@ export default function OSList({ onBack }: OSListProps) {
       const atualizado: OrdemServico = {
         ...selected,
         sig_cliente: aprovNome,
-        sig_cliente_cargo: aprovCargo || null,
+        sig_cliente_cargo: 'Gerente Operacional',
         sig_cliente_img: aprovSigImg,
         sig_cliente_data: hoje,
       };
@@ -167,7 +166,7 @@ export default function OSList({ onBack }: OSListProps) {
               <DetailRow label="Horímetro" value={selected.horimetro} />
             </div>
             <DetailRow label="Modelo / Série" value={selected.modelo} />
-            <DetailRow label="Técnico" value={selected.tecnico} />
+            <DetailRow label="Técnico Responsável" value={selected.tecnico} />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <DetailRow label="Data Abertura" value={selected.data_abertura} />
               <DetailRow label="Data Conclusão" value={selected.data_conclusao} />
@@ -217,20 +216,18 @@ export default function OSList({ onBack }: OSListProps) {
             {/* Aprovação do gerente — só aparece/é editável depois que a OS já existe */}
             <div className="pt-5 border-t border-[#D8E4F0]">
               <div className="text-[12px] font-semibold text-[#1A4A7A] tracking-wide mb-3">
-                APROVAÇÃO DO GERENTE
+                ASSINATURA DO GERENTE OPERACIONAL
               </div>
 
               {aprovado ? (
                 <div className="flex flex-col items-center gap-2">
                   <img
                     src={selected.sig_cliente_img as string}
-                    alt="Assinatura do aprovador"
+                    alt="Assinatura do Gerente Operacional"
                     className="max-w-[200px] border border-[#1A6B3C] rounded-lg bg-[#EAF5EE]"
                   />
                   <div className="text-[13px] font-medium text-[#0F2942]">{selected.sig_cliente}</div>
-                  {selected.sig_cliente_cargo && (
-                    <div className="text-[11px] text-[#8FA3B8]">{selected.sig_cliente_cargo}</div>
-                  )}
+                  <div className="text-[11px] text-[#8FA3B8]">Gerente Operacional</div>
                   {selected.sig_cliente_data && (
                     <div className="text-[11px] text-[#8FA3B8]">
                       Aprovado em {new Date(selected.sig_cliente_data + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -239,10 +236,10 @@ export default function OSList({ onBack }: OSListProps) {
                 </div>
               ) : (
                 <div className="bg-[#F7F9FC] border border-[#D8E4F0] rounded-lg p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-3.5">
-                    <div className="flex flex-col gap-1.5">
+                  <div className="mb-3.5">
+                    <div className="flex flex-col gap-1.5 max-w-sm">
                       <label className="text-[11.5px] font-medium text-[#5A6B80]">
-                        Nome do gerente / aprovador <span className="text-red-500">*</span>
+                        Nome do Gerente Operacional <span className="text-red-500">*</span>
                       </label>
                       <input
                         className="w-full border border-[#D8E4F0] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#2D6FAA] focus:shadow-[0_0_0_3px_rgba(45,111,170,.1)] transition-all"
@@ -251,19 +248,10 @@ export default function OSList({ onBack }: OSListProps) {
                         placeholder="Nome de quem está aprovando"
                       />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[11.5px] font-medium text-[#5A6B80]">Cargo</label>
-                      <input
-                        className="w-full border border-[#D8E4F0] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#2D6FAA] focus:shadow-[0_0_0_3px_rgba(45,111,170,.1)] transition-all"
-                        value={aprovCargo}
-                        onChange={(e) => setAprovCargo(e.target.value)}
-                        placeholder="Cargo"
-                      />
-                    </div>
                   </div>
 
                   <div className="flex justify-center">
-                    <SignaturePad label="Assinatura do Gerente" onChange={setAprovSigImg} value={aprovSigImg} />
+                    <SignaturePad label="Assinatura do Gerente Operacional" onChange={setAprovSigImg} value={aprovSigImg} />
                   </div>
 
                   {aprovError && (
@@ -369,13 +357,16 @@ export default function OSList({ onBack }: OSListProps) {
                     </span>
                     <AprovacaoBadge aprovado={!!os.sig_cliente_img} />
                   </div>
-                  <div className="text-[12px] text-[#5A6B80] mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                  <div className="text-[13px] font-medium text-[#1A4A7A] mt-1.5">
+                    Técnico Responsável: {os.tecnico}
+                  </div>
+                  <div className="text-[12px] text-[#5A6B80] mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>Cliente: {os.cliente}</span>
                     <span>Gerador: {os.gerador}</span>
                     <span>Região: {os.regiao}</span>
                   </div>
                   <div className="text-[12px] text-[#8FA3B8] mt-0.5">
-                    Técnico: {os.tecnico} · {new Date(os.created_at).toLocaleDateString('pt-BR')}
+                    {new Date(os.created_at).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
