@@ -88,7 +88,43 @@ export default function OSForm({ onSaved }: OSFormProps) {
     });
   };
 
-  const handleFiles = (fileList: FileList | null) => {
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Não foi possível ler a imagem'));
+        img.onload = () => {
+          const MAX_DIM = 1280;
+          let { width, height } = img;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(reader.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
     const newFiles = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
     const remaining = 5 - fotos.length;
@@ -96,13 +132,14 @@ export default function OSForm({ onSaved }: OSFormProps) {
       setSaveMsg({ type: 'error', text: `Limite de 5 fotos atingido. Apenas ${remaining} foto(s) adicionada(s).` });
     }
     const toAdd = newFiles.slice(0, remaining);
-    toAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFotos((prev) => (prev.length < 5 ? [...prev, reader.result as string] : prev));
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of toAdd) {
+      try {
+        const compressed = await compressImage(file);
+        setFotos((prev) => (prev.length < 5 ? [...prev, compressed] : prev));
+      } catch {
+        setSaveMsg({ type: 'error', text: `Não foi possível processar a foto "${file.name}".` });
+      }
+    }
   };
 
   const removeFoto = (index: number) => {
