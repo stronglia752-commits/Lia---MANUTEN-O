@@ -78,7 +78,7 @@ export type OrdemServicoInsert = Omit<OrdemServico, 'id' | 'numero_os' | 'create
 
 export interface FlashReport {
   id: string;
-  cliente: string;
+  cliente: string | null;
   data: string;
   tecnico: string;
   hora_inicio: string | null;
@@ -98,9 +98,9 @@ export interface FlashReport {
   foto1_label: string | null;
   foto2_label: string | null;
   foto3_label: string | null;
-  foto1: string | null;
-  foto2: string | null;
-  foto3: string | null;
+  foto1: string[] | null;
+  foto2: string[] | null;
+  foto3: string[] | null;
   created_at: string;
 }
 
