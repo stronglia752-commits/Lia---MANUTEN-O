@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Trash2, ArrowLeft, Search, FileText, ShieldCheck, Clock } from 'lucide-react';
+import { Eye, Trash2, ArrowLeft, Search, FileText, ShieldCheck, Clock, Pencil } from 'lucide-react';
 import { supabase, type OrdemServico } from '@/lib/supabase';
 import SignaturePad from './SignaturePad';
 
 interface OSListProps {
   onBack: () => void;
+  onEdit: (os: OrdemServico) => void;
 }
 
-export default function OSList({ onBack }: OSListProps) {
+export default function OSList({ onBack, onEdit }: OSListProps) {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -283,7 +284,20 @@ export default function OSList({ onBack }: OSListProps) {
           </div>
         </div>
 
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-3 justify-center flex-wrap">
+          {aprovado ? (
+            <div className="text-[12px] text-[#8FA3B8] italic w-full text-center mb-1">
+              Esta OS já foi aprovada pelo Gerente Operacional e não pode mais ser editada.
+            </div>
+          ) : (
+            <button
+              onClick={() => onEdit(selected)}
+              className="px-6 py-3 bg-white text-[#1A4A7A] border border-[#1A4A7A] rounded-lg text-[14px] font-medium hover:bg-[#E8F0FA] transition-colors inline-flex items-center gap-2"
+            >
+              <Pencil size={16} />
+              Editar OS
+            </button>
+          )}
           <button
             onClick={() => window.print()}
             className="px-6 py-3 bg-[#0F2942] text-white rounded-lg text-[14px] font-medium hover:bg-[#1A4A7A] transition-colors inline-flex items-center gap-2"
