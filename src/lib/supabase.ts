@@ -75,3 +75,34 @@ export type OrdemServicoInsert = Omit<OrdemServico, 'id' | 'numero_os' | 'create
   sig_cliente_data?: string | null;
   sig_cliente_img?: string | null;
 };
+
+export interface FlashReport {
+  id: string;
+  cliente: string;
+  data: string;
+  tecnico: string;
+  hora_inicio: string | null;
+  hora_final: string | null;
+  horimetro: string | null;
+  regiao: string;
+  empresa: string;
+  resp_info: string;
+  cons_real: string | null;
+  cons_pot: string | null;
+  tipo_desvio: string | null;
+  descricao: string;
+  acoes: string | null;
+  observacoes: string | null;
+  resp_com: string | null;
+  cargo: string | null;
+  foto1_label: string | null;
+  foto2_label: string | null;
+  foto3_label: string | null;
+  foto1: string | null;
+  foto2: string | null;
+  foto3: string | null;
+  created_at: string;
+}
+
+export type FlashReportInsert = Omit<FlashReport, 'id' | 'created_at'>;
+
