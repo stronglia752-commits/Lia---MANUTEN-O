@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Layers, Calendar, AlertCircle, Wrench, Activity, Package,
   CheckCircle, Camera, FileText, PenLine, Printer, Trash2, Save,
   Upload, X,
 } from 'lucide-react';
 import SignaturePad from './SignaturePad';
-import { supabase, type OrdemServicoInsert } from '@/lib/supabase';
+import { supabase, type OrdemServicoInsert, type OrdemServico } from '@/lib/supabase';
 
 const REGIOES = ['Autazes', 'Borba', 'Humaitá', 'São Gabriel da Cachoeira', 'Nova Olinda'];
 const COMPONENTES = ['AVR', 'PMG / Excitatriz', 'Disjuntor', 'Carter', 'Bobina de fechamento', 'Conector / Cabo', 'Fusível', 'Outro'];
@@ -20,12 +20,12 @@ const STATUS_OPTIONS = [
 
 interface OSFormProps {
   onSaved: () => void;
+  editingOS?: OrdemServico | null;
+  onCancelEdit?: () => void;
 }
 
-export default function OSForm({ onSaved }: OSFormProps) {
-  const today = new Date().toISOString().split('T')[0];
-
-  const [form, setForm] = useState({
+function blankForm(today: string) {
+  return {
     tipo: 'Corretiva',
     cliente: 'V.POWER',
     contrato: '',
@@ -61,11 +61,58 @@ export default function OSForm({ onSaved }: OSFormProps) {
     sig_tecnico: 'Matheus Firmes Reis',
     sig_cargo: 'Técnico de Manutenção',
     sig_data: today,
-  });
+  };
+}
 
-  const [componentes, setComponentes] = useState<string[]>([]);
-  const [fotos, setFotos] = useState<string[]>([]);
-  const [sigTecnicoImg, setSigTecnicoImg] = useState<string | null>(null);
+function formFromOS(os: OrdemServico) {
+  return {
+    tipo: os.tipo, cliente: os.cliente, contrato: os.contrato ?? '',
+    regiao: os.regiao, gerador: os.gerador, horimetro: os.horimetro ?? '',
+    modelo: os.modelo ?? '', tecnico: os.tecnico,
+    data_abertura: os.data_abertura, data_conclusao: os.data_conclusao ?? '',
+    hora_inicio: os.hora_inicio, hora_conclusao: os.hora_conclusao ?? '',
+    responsavel: os.responsavel, defeito: os.defeito, prioridade: os.prioridade,
+    outro_componente: os.outro_componente ?? '', causa_raiz: os.causa_raiz ?? '',
+    diagnostico: os.diagnostico, intervencoes: os.intervencoes, servico: os.servico,
+    va: os.medicoes?.va ?? '', vb: os.medicoes?.vb ?? '', vc: os.medicoes?.vc ?? '',
+    ca: os.medicoes?.ca ?? '', cb: os.medicoes?.cb ?? '', cc: os.medicoes?.cc ?? '',
+    freq: os.medicoes?.freq ?? '', fp: os.medicoes?.fp ?? '',
+    p1d: os.pecas?.p1d ?? '', p1c: os.pecas?.p1c ?? '', p1q: os.pecas?.p1q ?? '',
+    p2d: os.pecas?.p2d ?? '', p2c: os.pecas?.p2c ?? '', p2q: os.pecas?.p2q ?? '',
+    p3d: os.pecas?.p3d ?? '', p3c: os.pecas?.p3c ?? '', p3q: os.pecas?.p3q ?? '',
+    pecas_extra: os.pecas?.extra ?? '',
+    status_final: os.status_final, prazo: os.prazo ?? '',
+    foto_descricao: os.foto_descricao ?? '', observacoes: os.observacoes ?? '',
+    proxima_manutencao: os.proxima_manutencao ?? '',
+    sig_tecnico: os.sig_tecnico ?? '', sig_cargo: os.sig_cargo ?? '',
+    sig_data: os.sig_data,
+  };
+}
+
+export default function OSForm({ onSaved, editingOS, onCancelEdit }: OSFormProps) {
+  const today = new Date().toISOString().split('T')[0];
+  const isEditing = !!editingOS;
+
+  const [form, setForm] = useState(editingOS ? formFromOS(editingOS) : blankForm(today));
+
+  const [componentes, setComponentes] = useState<string[]>(editingOS?.componentes ?? []);
+  const [fotos, setFotos] = useState<string[]>(editingOS?.fotos ?? []);
+  const [sigTecnicoImg, setSigTecnicoImg] = useState<string | null>(editingOS?.sig_tecnico_img ?? null);
+
+  useEffect(() => {
+    if (editingOS) {
+      setForm(formFromOS(editingOS));
+      setComponentes(editingOS.componentes ?? []);
+      setFotos(editingOS.fotos ?? []);
+      setSigTecnicoImg(editingOS.sig_tecnico_img ?? null);
+    } else {
+      setForm(blankForm(today));
+      setComponentes([]);
+      setFotos([]);
+      setSigTecnicoImg(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingOS?.id]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -127,15 +174,15 @@ export default function OSForm({ onSaved }: OSFormProps) {
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
     const newFiles = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
-    const remaining = 5 - fotos.length;
+    const remaining = 10 - fotos.length;
     if (newFiles.length > remaining) {
-      setSaveMsg({ type: 'error', text: `Limite de 5 fotos atingido. Apenas ${remaining} foto(s) adicionada(s).` });
+      setSaveMsg({ type: 'error', text: `Limite de 10 fotos atingido. Apenas ${remaining} foto(s) adicionada(s).` });
     }
     const toAdd = newFiles.slice(0, remaining);
     for (const file of toAdd) {
       try {
         const compressed = await compressImage(file);
-        setFotos((prev) => (prev.length < 5 ? [...prev, compressed] : prev));
+        setFotos((prev) => (prev.length < 10 ? [...prev, compressed] : prev));
       } catch {
         setSaveMsg({ type: 'error', text: `Não foi possível processar a foto "${file.name}".` });
       }
@@ -178,22 +225,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
     }
     setSaving(true);
     try {
-      const { data: lastOs } = await supabase
-        .from('ordens_servico')
-        .select('numero_os')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let numeroOs = `OS-${new Date().getFullYear()}-0001`;
-      if (lastOs?.numero_os) {
-        const parts = lastOs.numero_os.split('-');
-        const seq = parseInt(parts[2] ?? '0', 10) + 1;
-        numeroOs = `OS-${parts[1]}-${String(seq).padStart(4, '0')}`;
-      }
-
-      const insert: OrdemServicoInsert = {
-        numero_os: numeroOs,
+      const dados = {
         tipo: form.tipo,
         cliente: form.cliente,
         contrato: form.contrato || null,
@@ -238,11 +270,37 @@ export default function OSForm({ onSaved }: OSFormProps) {
         sig_tecnico_img: sigTecnicoImg,
       };
 
-      const { error } = await supabase.from('ordens_servico').insert(insert);
-      if (error) throw error;
+      if (isEditing && editingOS) {
+        const { error } = await supabase
+          .from('ordens_servico')
+          .update(dados)
+          .eq('id', editingOS.id);
+        if (error) throw error;
 
-      setSaveMsg({ type: 'success', text: `OS ${numeroOs} salva com sucesso!` });
-      setTimeout(() => onSaved(), 1500);
+        setSaveMsg({ type: 'success', text: `OS ${editingOS.numero_os} atualizada com sucesso!` });
+        setTimeout(() => onSaved(), 1500);
+      } else {
+        const { data: lastOs } = await supabase
+          .from('ordens_servico')
+          .select('numero_os')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let numeroOs = `OS-${new Date().getFullYear()}-0001`;
+        if (lastOs?.numero_os) {
+          const parts = lastOs.numero_os.split('-');
+          const seq = parseInt(parts[2] ?? '0', 10) + 1;
+          numeroOs = `OS-${parts[1]}-${String(seq).padStart(4, '0')}`;
+        }
+
+        const insert: OrdemServicoInsert = { ...dados, numero_os: numeroOs };
+        const { error } = await supabase.from('ordens_servico').insert(insert);
+        if (error) throw error;
+
+        setSaveMsg({ type: 'success', text: `OS ${numeroOs} salva com sucesso!` });
+        setTimeout(() => onSaved(), 1500);
+      }
     } catch (err) {
       setSaveMsg({ type: 'error', text: `Erro ao salvar: ${(err as Error).message}` });
     } finally {
@@ -283,6 +341,13 @@ export default function OSForm({ onSaved }: OSFormProps) {
 
   return (
     <div className="max-w-[760px] mx-auto px-4 pb-16">
+      {/* AVISO DE EDIÇÃO */}
+      {isEditing && (
+        <div className="mb-4 p-3 rounded-lg text-[13px] bg-[#E8F0FA] text-[#1A4A7A] border border-[#B8D0E8]">
+          Editando OS <strong>{editingOS!.numero_os}</strong> já salva. As alterações vão substituir os dados atuais.
+        </div>
+      )}
+
       {/* TIPO */}
       <Card icon={<Layers size={14} />} title="TIPO DE MANUTENÇÃO">
         <div>
@@ -507,7 +572,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
       {/* 8. FOTOS */}
       <Card icon={<Camera size={14} />} title="8. REGISTRO FOTOGRÁFICO">
         <div>
-          <label className="text-[11.5px] font-medium text-[#5A6B80]">Fotos do evento / serviço (até 5 imagens)</label>
+          <label className="text-[11.5px] font-medium text-[#5A6B80]">Fotos do evento / serviço (até 10 imagens)</label>
           <div
             className="border-2 border-dashed border-[#D8E4F0] rounded-lg p-6 text-center cursor-pointer text-[#5A6B80] text-[13px] hover:border-[#2D6FAA] hover:bg-[#f0f6ff] transition-all mt-1.5"
             onClick={() => fileInputRef.current?.click()}
@@ -605,7 +670,7 @@ export default function OSForm({ onSaved }: OSFormProps) {
             ) : (
               <>
                 <Save size={16} />
-                Salvar OS
+                {isEditing ? 'Salvar Alterações' : 'Salvar OS'}
               </>
             )}
           </button>
@@ -616,13 +681,23 @@ export default function OSForm({ onSaved }: OSFormProps) {
             <Printer size={16} />
             Gerar PDF
           </button>
-          <button
-            onClick={clearForm}
-            className="px-6 py-3 bg-white text-red-500 border border-red-200 rounded-lg text-[14px] font-medium hover:bg-red-50 transition-colors inline-flex items-center gap-2"
-          >
-            <Trash2 size={16} />
-            Limpar
-          </button>
+          {isEditing ? (
+            <button
+              onClick={onCancelEdit}
+              className="px-6 py-3 bg-white text-[#5A6B80] border border-[#D8E4F0] rounded-lg text-[14px] font-medium hover:bg-[#F7F9FC] transition-colors inline-flex items-center gap-2"
+            >
+              <X size={16} />
+              Cancelar edição
+            </button>
+          ) : (
+            <button
+              onClick={clearForm}
+              className="px-6 py-3 bg-white text-red-500 border border-red-200 rounded-lg text-[14px] font-medium hover:bg-red-50 transition-colors inline-flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Limpar
+            </button>
+          )}
         </div>
         <div className="text-[11px] text-[#8FA3B8] mt-2">No Chrome: escolha "Salvar como PDF" no destino da impressão</div>
       </div>
