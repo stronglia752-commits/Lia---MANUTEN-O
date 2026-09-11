@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+ import { useState, useEffect, useCallback } from 'react';
 import { Eye, Trash2, ArrowLeft, Search, FileText, Pencil, Printer } from 'lucide-react';
 import { supabase, type FlashReport } from '@/lib/supabase';
 
@@ -45,18 +45,18 @@ export default function FlashReportList({ onBack, onEdit }: FlashReportListProps
   const filtered = reports.filter((r) => {
     const q = search.toLowerCase();
     return (
-      r.cliente?.toLowerCase().includes(q) ||
       r.tecnico?.toLowerCase().includes(q) ||
-      r.regiao?.toLowerCase().includes(q)
+      r.regiao?.toLowerCase().includes(q) ||
+      r.tipo_desvio?.toLowerCase().includes(q)
     );
   });
 
   if (selected) {
-    const fotos = [
-      { src: selected.foto1, label: selected.foto1_label },
-      { src: selected.foto2, label: selected.foto2_label },
-      { src: selected.foto3, label: selected.foto3_label },
-    ].filter((f) => f.src);
+    const grupos = [
+      { titulo: selected.foto1_label || 'Foto 1 — Local da Falha', fotos: selected.foto1 ?? [] },
+      { titulo: selected.foto2_label || 'Foto 2 — Identificação do Equipamento', fotos: selected.foto2 ?? [] },
+      { titulo: selected.foto3_label || 'Foto 3', fotos: selected.foto3 ?? [] },
+    ].filter((g) => g.fotos.length > 0);
 
     return (
       <div className="max-w-[760px] mx-auto px-4 pb-16">
@@ -67,17 +67,17 @@ export default function FlashReportList({ onBack, onEdit }: FlashReportListProps
         <div className="bg-white rounded-xl border border-[#D8E4F0] overflow-hidden mb-4">
           <div className="px-5 py-3 bg-[#F7F9FC] border-b border-[#D8E4F0] flex items-center gap-2.5">
             <FileText size={14} className="text-[#1A4A7A]" />
-            <div className="text-[12px] font-semibold text-[#1A4A7A] tracking-wide">{selected.cliente}</div>
+            <div className="text-[12px] font-semibold text-[#1A4A7A] tracking-wide">{selected.tecnico}</div>
           </div>
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailRow label="Data" value={selected.data ? new Date(selected.data + 'T00:00:00').toLocaleDateString('pt-BR') : null} />
-              <DetailRow label="Técnico Responsável" value={selected.tecnico} />
+              <DetailRow label="Região" value={selected.regiao} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <DetailRow label="Região" value={selected.regiao} />
               <DetailRow label="Hora Início" value={selected.hora_inicio} />
               <DetailRow label="Hora Final" value={selected.hora_final} />
+              <DetailRow label="Horímetro Atual" value={selected.horimetro} />
             </div>
             <DetailRow label="Consequência Real" value={selected.cons_real} />
             <DetailRow label="Consequência Potencial" value={selected.cons_pot} />
@@ -87,19 +87,16 @@ export default function FlashReportList({ onBack, onEdit }: FlashReportListProps
             <DetailRow label="Observações" value={selected.observacoes} />
             <DetailRow label="Responsável pela Comunicação" value={selected.resp_com} />
 
-            {fotos.length > 0 && (
-              <div>
-                <div className="text-[11.5px] font-medium text-[#5A6B80] mb-2">Fotos</div>
+            {grupos.map((g, gi) => (
+              <div key={gi}>
+                <div className="text-[11.5px] font-medium text-[#5A6B80] mb-2">{g.titulo}</div>
                 <div className="flex flex-wrap gap-3">
-                  {fotos.map((f, i) => (
-                    <div key={i} className="text-center">
-                      <img src={f.src as string} alt={f.label ?? ''} className="w-24 h-24 object-cover rounded-lg border border-[#D8E4F0]" />
-                      {f.label && <div className="text-[10px] text-[#8FA3B8] mt-1 max-w-24">{f.label}</div>}
-                    </div>
+                  {g.fotos.map((f, i) => (
+                    <img key={i} src={f} alt={`${g.titulo} ${i + 1}`} className="w-24 h-24 object-cover rounded-lg border border-[#D8E4F0]" />
                   ))}
                 </div>
               </div>
-            )}
+            ))}
           </div>
         </div>
 
@@ -128,7 +125,7 @@ export default function FlashReportList({ onBack, onEdit }: FlashReportListProps
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FA3B8]" />
         <input
           type="text"
-          placeholder="Buscar por cliente, técnico, região..."
+          placeholder="Buscar por técnico, região, tipo de desvio..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 border border-[#D8E4F0] rounded-lg text-[13px] outline-none focus:border-[#2D6FAA] focus:shadow-[0_0_0_3px_rgba(45,111,170,.1)] transition-all"
@@ -149,8 +146,8 @@ export default function FlashReportList({ onBack, onEdit }: FlashReportListProps
             <div key={r.id} className="bg-white rounded-xl border border-[#D8E4F0] p-4 hover:border-[#2D6FAA] transition-all">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <span className="text-[14px] font-semibold text-[#0F2942]">{r.cliente}</span>
-                  <div className="text-[13px] font-medium text-[#1A4A7A] mt-1">{r.tecnico}</div>
+                  <span className="text-[14px] font-semibold text-[#0F2942]">{r.tecnico}</span>
+                  {r.tipo_desvio && <div className="text-[13px] font-medium text-[#1A4A7A] mt-1">{r.tipo_desvio}</div>}
                   <div className="text-[12px] text-[#5A6B80] mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>Região: {r.regiao}</span>
                     <span>{r.data ? new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</span>
